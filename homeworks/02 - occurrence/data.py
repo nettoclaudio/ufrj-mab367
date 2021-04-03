@@ -4,6 +4,7 @@ import argparse
 import pathlib
 import server
 import signal
+import sys
 
 
 class Data(server.Server):
@@ -13,31 +14,33 @@ class Data(server.Server):
         self.data_dir = data_dir
 
     def read_file(self, filename):
-        path = pathlib.Path(self.data_dir)
+        path = pathlib.Path(self.data_dir, filename)
 
-        if not pathlib.Path(filename).is_file():
+        if not path.is_file():
             raise FileNotFoundError(f'{filename} not found')
 
-        with open(pathlib.Path(filename), 'r') as f:
+        with open(path, 'r') as f:
             return f.read()
 
     def handle_connection(self, worker_id, peer_conn, peer_address):
         while True:
-            data = peer_conn.recv()
+            data = peer_conn.recv(self.payload_size)
             if not data:
                 return
 
             filename = str(data, encoding='utf-8').rstrip('\r\n')
 
             try:
-                content = self.search_file(filename)
-                peer_conn.sendall(f'FOUND: {content}')
+                content = self.read_file(filename)
+                peer_conn.sendall(f'BEGIN_FOUND\n{content}\nEND_FOUND\n'.encode())
 
             except FileNotFoundError as e:
-                peer_conn.sendall(f'FILE_NOT_FOUND: {e}')
+                peer_conn.sendall(f'BEGIN_FILE_NOT_FOUND\n{e}\nEND_FILE_NOT_FOUND'.encode())
+
             except Exception as e:
                 print(f'worker #{worker_id}: an exception occurred while reading file {filename}: Exception = {e}', file = sys.stderr)
                 return
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'starts the data server')
