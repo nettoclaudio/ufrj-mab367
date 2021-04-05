@@ -1,45 +1,50 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import pathlib
 import server
 import signal
 import sys
 
 
+def read_file(path):
+    with open(path, 'r') as fh:
+        return fh.read()
+
+
 class Data(server.Server):
 
-    def __init__(self, threads = 2, payload_size = 1024, data_dir = '/tmp/files'):
+    ERROR_FILE_NOT_FOUND        = 'error: file not found'
+    ERROR_INTERNAL_SERVER_ERROR = 'error: internal server error'
+
+    def __init__(self, data_dir, threads = 2, payload_size = 1024):
         super().__init__(threads = threads, payload_size = payload_size)
         self.data_dir = data_dir
 
-    def read_file(self, filename):
-        path = pathlib.Path(self.data_dir, filename)
-
-        if not path.is_file():
-            raise FileNotFoundError(f'{filename} not found')
-
-        with open(path, 'r') as f:
-            return f.read()
-
     def handle_connection(self, worker_id, peer_conn, peer_address):
-        while True:
-            data = peer_conn.recv(self.payload_size)
-            if not data:
-                return
+        data = peer_conn.recv(self.payload_size)
+        if not data:
+            print(f'worker #{worker_id}: {peer_address[0]}:{peer_address[1]} sent no data, closing connection', file = sys.stderr)
+            return
 
-            filename = str(data, encoding='utf-8').rstrip('\r\n')
+        message = ''
 
-            try:
-                content = self.read_file(filename)
-                peer_conn.sendall(f'BEGIN_FOUND\n{content}\nEND_FOUND\n'.encode())
+        try:
+            filename = str(data, encoding='utf-8').rstrip(os.linesep)
+            print(f'worker #{worker_id}: {peer_address[0]}:{peer_address[1]} has requested the {filename} file', file = sys.stderr)
 
-            except FileNotFoundError as e:
-                peer_conn.sendall(f'BEGIN_FILE_NOT_FOUND\n{e}\nEND_FILE_NOT_FOUND'.encode())
+            message = read_file(pathlib.Path(self.data_dir, filename))
 
-            except Exception as e:
-                print(f'worker #{worker_id}: an exception occurred while reading file {filename}: Exception = {e}', file = sys.stderr)
-                return
+        except FileNotFoundError as e:
+            message = Data.ERROR_FILE_NOT_FOUND
+
+        except Exception as e:
+            message = Data.ERROR_INTERNAL_SERVER_ERROR
+            print(f'worker #{worker_id}: an exception occurred while reading file {filename}: Exception = {e}', file = sys.stderr)
+
+        finally:
+            peer_conn.send(f'{message}{os.linesep}'.encode())
 
 
 if __name__ == '__main__':
@@ -48,11 +53,11 @@ if __name__ == '__main__':
     parser.add_argument('--host', '-H', type = str, default = 'localhost', help = 'local address (default localhost)')
     parser.add_argument('--port', '-p', type = int, default = 8080, help = 'local port (default 8080)')
     parser.add_argument('--threads', '-t', type = int, default = 2, help = 'max number of simultaneous clients (default 2)')
-    parser.add_argument('--data-dir', type = str, default = '/tmp/files', help = 'path in filesystem which the files are stored (default /tmp/files)')
+    parser.add_argument('--data-dir', type = str, default = './files', help = 'path at filesystem which the files are stored (default ./files)')
 
     args = parser.parse_args()
 
-    server = Data(data_dir = args.data_dir)
+    server = Data(data_dir = args.data_dir, threads = args.threads)
 
     for ss in [signal.SIGINT, signal.SIGTERM]:
         signal.signal(ss, lambda received_signal, frame: server.stop())
