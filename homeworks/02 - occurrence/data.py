@@ -46,6 +46,10 @@ class Data(server.Server):
         finally:
             peer_conn.send(f'{message}{os.linesep}'.encode())
 
+    @staticmethod
+    def is_error(message):
+        return Data.ERROR_INTERNAL_SERVER_ERROR in message or Data.ERROR_FILE_NOT_FOUND in message
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = 'starts the data server')
