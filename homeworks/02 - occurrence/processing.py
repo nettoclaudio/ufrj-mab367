@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import csv
+import io
 import os
 import pathlib
 import server
@@ -18,12 +20,14 @@ def count_word_occurrences(content):
 
     return count
 
-def format_word_occurrences_csv(count):
-    r = f'sep=,{os.linesep}'
-    for word in count:
-        r += f'"{word}",{count[word]}{os.linesep}'
+def encode_word_occurrences_to_csv(count):
+    r = io.StringIO()
 
-    return r
+    writer = csv.writer(r)
+    for word in count:
+        writer.writerow([word, count[word]])
+
+    return r.getvalue()
 
 
 class Processing(server.Server):
@@ -50,7 +54,7 @@ class Processing(server.Server):
         if Data.is_error(content):
             response = content
         else:
-            response = format_word_occurrences_csv(count_word_occurrences(content))
+            response = encode_word_occurrences_to_csv(count_word_occurrences(content))
 
         peer_conn.send(response.encode())
 
