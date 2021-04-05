@@ -122,19 +122,3 @@ class Server:
             except Exception as e:
                 print(f'worker #{worker_id}: an exception occurred while handling a connection from peer {peer_id}: Exception = {e}', file = sys.stderr)
                 return
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description = 'starts server which echoes incoming messages from remote clients')
-
-    parser.add_argument('--host', '-H', type = str, default = 'localhost', help = 'local address (default localhost)')
-    parser.add_argument('--port', '-p', type = int, default = 8080, help = 'local port (default 8080)')
-    parser.add_argument('--threads', '-t', type = int, default = 2, help = 'max number of simultaneous clients (default 2)')
-
-    args = parser.parse_args()
-
-    server = Server(threads = args.threads)
-
-    for ss in [signal.SIGINT, signal.SIGTERM]:
-        signal.signal(ss, lambda received_signal, frame: server.stop())
-
-    server.start(host = args.host, port = args.port)
