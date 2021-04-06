@@ -14,6 +14,16 @@ from data import Data
 
 
 def count_word_occurrences(content):
+    '''
+    Count the occurrence of the words in "content".
+
+    Args:
+        content (str): The received content from a requested file.
+
+    Returns:
+        dict: Contains the words as keys and their ocurrences as values.
+    '''
+
     count = dict()
     for word in content.split():
         count[word] = count.get(word, 0) + 1
@@ -21,6 +31,16 @@ def count_word_occurrences(content):
     return count
 
 def encode_word_occurrences_to_csv(count):
+    '''
+    Encodes a received dict to a CSV.
+
+    Args:
+        count (dict): Contains the words as keys and their ocurrences as values.
+
+    Returns:
+        csv: The count is just reestructured as a CSV, without nothing additional.
+    '''
+
     r = io.StringIO()
 
     writer = csv.writer(r)
@@ -31,6 +51,9 @@ def encode_word_occurrences_to_csv(count):
 
 
 class Processing(server.Server):
+    '''
+    Reimplements the Server Class.
+    '''
 
     def __init__(self, data_address = 'localhost', data_port = 8080, threads = 2, payload_size = 1024):
         super().__init__(threads = threads, payload_size = payload_size)
@@ -59,6 +82,15 @@ class Processing(server.Server):
         peer_conn.send(response.encode())
 
     def get_file_content(self, worker_id, filename):
+        '''
+        Connects with Data Server and sends the received file name.
+
+        Args:
+            filename (str): The requested file name.
+
+        Returns:
+            str: The content of the file name requested to the Data Server.
+        '''
         content = ''
 
         with socket.socket() as data_conn:

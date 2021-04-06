@@ -14,6 +14,16 @@ from data import Data
 
 
 def format_user_response(content):
+    '''
+    Decode the CSV, sort the occurrences and filter the top 10 words that appeared the most.
+
+    Args:
+        content (str): A CSV str content.
+
+    Returns:
+        str: A string that will be sent to the client.
+    '''
+
     top10 = filter_top10_occurrences(decode_word_occurrences_from_csv(content))
 
     response = f'WORD\t\tOCCURRENCES{os.linesep}'
@@ -23,6 +33,17 @@ def format_user_response(content):
     return response
 
 def filter_top10_occurrences(count):
+    '''
+    Filter the top 10 word occurrence.
+
+    Args:
+        count (dict): Contains the word as a key and it's occurence as a value.
+
+    Returns:
+        list (tuples): Each element is a word and it's ocurrences, 
+        first by the most occurrence and, if needed a lexicographical order (in case two words tie).
+    '''
+
     count_by_occurrences = aggregate_words_by_occurrence(count)
 
     desc_occurrences = list(count_by_occurrences.keys())
@@ -43,6 +64,16 @@ def filter_top10_occurrences(count):
     return result
 
 def aggregate_words_by_occurrence(count):
+    '''
+    Aggregate word with the same count on the same "structure", so they don't "compete" with each other.
+
+    Args:
+        count (dict): Contains the word as a key and it's occurence as a value.
+
+    Returns:
+        dict: Contains the words as values and their ocurrences as keys.
+    '''
+
     count_by_occurrences = {}
     for word, occurrences in count.items():
         count_by_occurrences[occurrences] = count_by_occurrences.get(occurrences, []) + [word]
@@ -50,6 +81,16 @@ def aggregate_words_by_occurrence(count):
     return count_by_occurrences
 
 def decode_word_occurrences_from_csv(content):
+    '''
+    Decodes a received CSV to a dict.
+
+    Args:
+        count (csv): A received CSV.
+
+    Returns:
+        dict: Contains the words as keys and their ocurrences as values.
+    '''
+
     count = {}
     for row in csv.reader(io.StringIO(content)):
         word, occurrences = row[0], int(row[1])
@@ -58,6 +99,9 @@ def decode_word_occurrences_from_csv(content):
     return count
 
 class Interface(server.Server):
+    '''
+    Reimplements the Server Class.
+    '''
 
     def __init__(self, processing_address = 'localhost', processing_port = 8080, threads = 2, payload_size = 1024):
         super().__init__(threads = threads, payload_size = payload_size)
@@ -86,6 +130,16 @@ class Interface(server.Server):
         peer_conn.send(response.encode())
 
     def get_word_occurrences(self, worker_id, filename):
+        '''
+        Connects on the Processing Server and gets the word occurrence list.
+
+        Args:
+            filename (str): The name of the requested file.
+
+        Returns:
+            csv: Contains the words and their occurrences on a CSV format.
+        '''
+
         content = ''
 
         with socket.socket() as processing_conn:

@@ -12,8 +12,15 @@ def read_file(path):
     with open(path, 'r') as fh:
         return fh.read()
 
-
 class Data(server.Server):
+    '''
+    Connects to the remote server, sends the messages from STDIN to there
+    and writes the replies on STDOUT.
+
+    Args:
+        address (str): remote server address.
+        port (int): remote server port.
+    '''
 
     ERROR_FILE_NOT_FOUND        = 'error: file not found'
     ERROR_INTERNAL_SERVER_ERROR = 'error: internal server error'
